@@ -71,9 +71,10 @@ class InstalledAppsPlugin() : MethodCallHandler, FlutterPlugin, ActivityAware {
                 val includeSystemApps = call.argument("exclude_system_apps") ?: true
                 val withIcon = call.argument("with_icon") ?: false
                 val packageNamePrefix: String = call.argument("package_name_prefix") ?: ""
+                val excludeNoEntry = call.argument("exclude_no_entry") ?: false  // 获取新增参数
                 Thread {
                     val apps: List<Map<String, Any?>> =
-                        getInstalledApps(includeSystemApps, withIcon, packageNamePrefix)
+                        getInstalledApps(includeSystemApps, withIcon, packageNamePrefix, excludeNoEntry)
                     result.success(apps)
                 }.start()
             }
@@ -121,19 +122,24 @@ class InstalledAppsPlugin() : MethodCallHandler, FlutterPlugin, ActivityAware {
     private fun getInstalledApps(
         excludeSystemApps: Boolean,
         withIcon: Boolean,
-        packageNamePrefix: String
+        packageNamePrefix: String,
+        excludeNoEntry: Boolean // 新增参数
     ): List<Map<String, Any?>> {
         val packageManager = getPackageManager(context!!)
         var installedApps = packageManager.getInstalledApplications(0)
-        if (excludeSystemApps)
-            installedApps =
-                installedApps.filter { app -> !isSystemApp(packageManager, app.packageName) }
-        if (packageNamePrefix.isNotEmpty())
+        if (excludeSystemApps) {
+            installedApps = installedApps.filter { app -> !isSystemApp(packageManager, app.packageName) }
+        }
+        if (packageNamePrefix.isNotEmpty()) {
             installedApps = installedApps.filter { app ->
-                app.packageName.startsWith(
-                    packageNamePrefix.lowercase(ENGLISH)
-                )
+                app.packageName.startsWith(packageNamePrefix.lowercase(ENGLISH))
             }
+        }
+        if (excludeNoEntry) { // 根据 getLaunchIntentForPackage 的返回结果过滤掉没有入口的 app
+            installedApps = installedApps.filter { app ->
+                packageManager.getLaunchIntentForPackage(app.packageName) != null
+            }
+        }
         return installedApps.map { app -> convertAppToMap(packageManager, app, withIcon) }
     }
 

@@ -10,12 +10,14 @@ class InstalledApps {
   /// [excludeSystemApps] specifies whether to exclude system apps from the list.
   /// [withIcon] specifies whether to include app icons in the list.
   /// [packageNamePrefix] is an optional parameter to filter apps with package names starting with a specific prefix.
+  /// [excludeNoEntry] specifies whether to exclude apps without an entry point.
   ///
   /// Returns a list of [AppInfo] objects representing the installed apps.
   static Future<List<AppInfo>> getInstalledApps([
     bool excludeSystemApps = true,
     bool withIcon = false,
     String packageNamePrefix = "",
+    bool excludeNoEntry = false, // 新增参数：排除没有入口的 app
   ]) async {
     dynamic apps = await _channel.invokeMethod(
       "getInstalledApps",
@@ -23,6 +25,7 @@ class InstalledApps {
         "exclude_system_apps": excludeSystemApps,
         "with_icon": withIcon,
         "package_name_prefix": packageNamePrefix,
+        "exclude_no_entry": excludeNoEntry, // 传递新参数到 Android 端
       },
     );
     return AppInfo.parseList(apps);
